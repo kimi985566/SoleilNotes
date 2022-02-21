@@ -1,4 +1,4 @@
-![](../asset/retrofit_use.png)
+![](../../asset/retrofit_use.png)
 
 # 1、简介
 这是 Android 进阶笔记第二篇，Retrofit 源码分析，Retrofit 是一个  RESTful 设计风格的网络请求框架，至于什么是 RESTful 设计风格的接口，这里就不展开来讲，感兴趣的同学可以与查阅相关资料，以前搞后台 Spring 全家桶，我们设计的接口全部都是按照 RESTful 来设计，写起来非常爽。扯远了，回到主题，对于 Retrofit而言 ，实际上真正负责网络请求工作的是底层的 **Okhttp**，关于 Okhttp 的解析，可以参考上一篇文章[Android 进阶笔记--Okhttp4.X 源码分析](https://blog.csdn.net/qq_44947117/article/details/104066775)。
