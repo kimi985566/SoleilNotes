@@ -151,7 +151,7 @@ companion object {
 * 异步请求（enqueue）
 
 ##### 3.2.2.1 同步请求
-```java
+```kotlin
 //直接请求，并返回结果
 override fun execute(): Response {
     synchronized(this) {
@@ -169,7 +169,7 @@ override fun execute(): Response {
  }
 ```
 ##### 3.2.2.2 异步请求
-```java
+```kotlin
 //构造一个 AsyncCall 加入到队列中
 override fun enqueue(responseCallback: Callback) {
     synchronized(this) {
@@ -684,7 +684,26 @@ class RetryAndFollowUpInterceptor(private val client: OkHttpClient) : Intercepto
     private const val MAX_FOLLOW_UPS = 20
   }
 }
+
 ```
+
+我们再来看看整个方法的流程：
+
+1. 构建一个StreamAllocation对象，StreamAllocation相当于是个管理类，维护了Connections、Streams和Calls之间的管理，该类初始化一个Socket连接对象，获取输入/输出流对象。
+2. 继续执行下一个Interceptor，即BridgeInterceptor
+3. 抛出异常，则检测连接是否还可以继续，以下情况不会重试：
+   
+  - 客户端配置出错不再重试
+  - 出错后，request body不能再次发送
+  - 发生以下Exception也无法恢复连接：
+    - ProtocolException：协议异常
+    - InterruptedIOException：中断异常
+    - SSLHandshakeException：SSL握手异常
+    - SSLPeerUnverifiedException：SSL握手未授权异常
+  - 没有更多线路可以选择 根据响应码处理请求，返回Request不为空时则进行重定向处理，重定向的次数不能超过20次。
+
+4. 最后是根据响应码来处理请求头，由followUpRequest()方法完成
+
 ##### 3.3.2.2 BridgeInterceptor
 作用：连接桥拦截器，对请求头和响应头进行处理。
 ```java
@@ -767,6 +786,20 @@ class BridgeInterceptor(private val cookieJar: CookieJar) : Interceptor
     }
   }
 }
+
+就跟它的名字描述的那样，它是一个桥梁，负责把用户构造的请求转换为发送给服务器的请求，把服务器返回的响应转换为对用户友好的响应。
+在Request阶段配置用户信息，并添加一些请求头。在Response阶段，进行gzip解压。
+这个方法主要是针对Header做了一些处理，这里主要提一下"Accept-Encoding", "gzip"，关于它有以下几点需要注意：
+
+- 开发者没有添加Accept-Encoding时，自动添加Accept-Encoding: gzip
+- 自动添加Accept-Encoding，会对request，response进行自动解压
+- 手动添加Accept-Encoding，不负责解压缩
+- 自动解压时移除Content-Length，所以上层Java代码想要contentLength时为-1
+- 自动解压时移除 Content-Encoding
+- 自动解压时，如果是分块传输编码，Transfer-Encoding: chunked不受影响。
+
+BridgeInterceptor主要就是针对Header做了一些处理，我们接着来看CacheInterceptor。
+
 ```
 ##### 3.3.2.3 CacheInterceptor
 作用：缓存的读取和更新
@@ -861,6 +894,19 @@ class BridgeInterceptor(private val cookieJar: CookieJar) : Interceptor
     return response //返回 response 
   }
 ```
+
+整个方法的流程如下所示：
+
+1. 读取候选缓存，具体如何读取的我们下面会讲。
+2. 创建缓存策略，强制缓存、对比缓存等，关于缓存策略我们下面也会讲。
+3. 根据策略，不使用网络，又没有缓存的直接报错，并返回错误码504。
+4. 根据策略，不使用网络，有缓存的直接返回。
+5. 前面两个都没有返回，继续执行下一个Interceptor，即ConnectInterceptor。
+6. 接收到网络结果，如果响应code式304，则使用缓存，返回缓存结果。
+7. 读取网络结果。
+8. 对数据进行缓存。
+9. 返回网络读取的结果。
+
 ##### 3.3.2.4 ConnectInterceptor
 作用：服务器进行连接
 ```java
@@ -876,6 +922,13 @@ object ConnectInterceptor : Interceptor {
   }
 }
 ```
+ConnectInterceptor在Request阶段建立连接，处理方式也很简单，创建了两个对象：
+
+- HttpCodec：用来编码HTTP requests和解码HTTP responses
+- RealConnection：连接对象，负责发起与服务器的连接。
+
+这里事实上包含了连接、连接池等一整套的Okhttp的连接机制
+
 ##### 3.3.2.5 CallServerInterceptor
 作用：发送请求和接收请求
 ```java
@@ -982,6 +1035,13 @@ class CallServerInterceptor(private val forWebSocket: Boolean) : Interceptor {
 }
 //写入请求头、写入请求体、读取响应头、读取响应体
 ```
+我们通过ConnectInterceptor已经连接到服务器了，接下来我们就是写入请求数据以及读出返回数据了。整个流程：
+
+- 写入请求头
+- 写入请求体
+- 读取响应头
+- 读取响应体
+
 至此，Okhttp的主体流程已经非常清晰了，但是其中还有一些小方面没有写，比如连接池、缓存策略等，有空时候再补上去。
 ## 4 参考
 * [okhttp架构图](https://www.jianshu.com/p/07d03949c885)
