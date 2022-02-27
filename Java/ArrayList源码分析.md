@@ -554,7 +554,23 @@ for (String s : list) {
 
 注：随机访问，通过索引号访问效率最高，使用使用迭代器效率最低。
 
-## 6 参考
+## 6 解决方法
+
+### Vector
+
+采用Vector实现线程安全，Vector在方法上加了锁，即synchronized
+
+这样就每次只能够一个线程进行操作，所以不会出现线程不安全的问题，但是因为加锁了，导致并发性下降。
+
+### Collections.synchronized()
+
+```Java
+List<String> list = Collections.synchronizedList(new ArrayList<>());
+```
+
+采用Collections集合工具类，在ArrayList外面包装一层 同步 机制
+
+## 7 参考
 
 [Java 集合系列03之 ArrayList详细介绍(源码解析)和使用示例](https://www.cnblogs.com/skywang12345/p/3308556.html)
 
