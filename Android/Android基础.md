@@ -1804,4 +1804,10 @@ RecyclerViewPool底层是使用了SparseArray来分开存储不同ViewType的Vie
 ### 129 说说 Kotlin 中的内联函数？
 
 
+### 130 刷新View
+
+1. requestLayout：requestLayout会调用measure和layout 等一系列操作，然后根据布局是否发生改变，surface是否被销毁，来决定是否调用draw。
+也就是说requestLayout肯定会调用measure和layout，但是如果我们的布局没有发生改变（布局大小），只是改变位置，那么就不会调用draw，我们的自定义View不会被重新绘制。
+2. invalidate：只会调用draw，而且肯定会调，即使什么都没有发生改变，它也会重新绘制。
+3. postInvalidate：用法几乎和invalidate一样，只是invalidate用于UI（主）线程，而postInvalidate用于异步线程。
 

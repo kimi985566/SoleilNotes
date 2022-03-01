@@ -31,6 +31,9 @@ val 定义常量 private，带有 public 的 get 方法，可见性为 private f
 
 const val 定义的常量，可见性为 public final static，可以直接访问。
 
+Kotlin 有两个关键字定义变量：var 和 val, 变量的类型在后面。
+var 定义的是可变变量，变量可以被重复赋值。val 定义的是只读变量，相当于java的final变量。
+
 #### 6 介绍一下伴生对象和静态成员？
 
 ```kotlin
@@ -97,3 +100,28 @@ MutableList ：可读写，返回的是一个 ArrayList；
 
 * Java中必须指定返回类型，void 不能省略，但是在 kotlin 中，如果返回为 unit，可以省略。
 * Java中 void 为一个关键字，但是在 kotlin 中 Void 是一个类。
+
+#### 12 判断 lateinit 变量是否已经被初始化
+
+当我们需要使用这个对象又无法确定该对象是否已经被初始化时，可以使用 isInitialized 进行判断。
+
+```Kotlin
+class MyService{
+	fun performAction(): String = "foo"
+}
+
+class Test{
+	private lateinit var myService: MyService
+
+	fun checkInit(){
+		// 如果 myService 对象还未初始化，则进行初始化
+		if(!this::myService.isInitialized){
+			myService = MyService()
+		}
+	}
+}
+```
+
+### 13 内联函数工作原理
+
+由于使用了 inline 关键字，编译器会将内联函数的内容复制到调用处，从而避免了创建新的函数对象。 需要注意的是， 内联函数提高代码性能的同时也会导致代码量的增加，所以应避免内联函数过大。
