@@ -43,6 +43,47 @@ Binder 中文译为粘合剂，它把系统中各个组件粘合到了一起，�
 
 套接字机制不但可以单机的不同进程通信，而且使得跨网机器间进程可以通信。它明确地将客户端与服务器 区分开来，可以实现多个客户端连到同一服务器。 
 
+## Binder 跨进程通信原理
+
+### 为什么要使用Binder
+
+#### 1. 性能
+
+主要影响的因素是拷贝次数：
+
+1. 管道、消息队列、Socket的拷贝次书都是两次，性能不是很好；
+2. 共享内存不需要拷贝，性能最好；
+3. Binder拷贝1次，性能仅次于共享内存；
+
+#### 2. 稳定性
+
+从稳定性的角度讲，Binder是优于共享内存的。
+
+1. Binder是基于C/S架构的，技术上已经很成熟，稳定；
+2. 共享内存没有分层，难以控制，并发同步访问临界资源时，可能还会产生死锁；
+
+#### 3.  安全
+
+Android是一个开源的系统，并且拥有开放性的平台，市场上应用来源很广，因此安全性对于Android 平台而言极其重要。传统的IPC接收方无法获得对方可靠的进程用户ID/进程ID（UID/PID），无法鉴别对方身份。Android 为每个安装好的APP分配了自己的UID， 通过进程的UID来鉴别进程身份。另外，Android系统中的Server端会判断UID/PID是否满足访问权限，而对外只暴露Client端，加强了系统的安全性。
+
+#### 4. 语言
+
+* Linux是基于C语言，C语言是面向过程的，Android应用层和Java Framework是基于Java语言，Java语言是面向对象的。
+* Binder本身符合面向对象的思想，因此作为Android的通信机制更合适。
+
+### Android中Binder的来源
+
+Binder是基于开源的OpenBinder实现的，OpenBinder最早并不是由Google公司开发的，而是Be Inc公司开发的，接着由Palm, Inc.公司负责开发。后来OpenBinder的作者Dianne Hackborn加入了Google公司，并负责Android平台的开发工作，顺便把这项技术也带进了Android。
+
+### 基于Binder通信的C/S架构
+
+![binder](../asset/binder.jpeg)
+
+* 系统在启动时，SystemServer进程启动后会创建Binder线程池，目的是通过Binder，使得在SystemServer进程中的服务（如AMS、PMS）可以和其他进程进行通信；
+* 我们常说的AMS、PMS都是基于Binder来实现的，再比如Client端的MediaPlayer和Server端的MeidaPlayerService不是运行在一个进程中的，同样需要Binder来实现通信。
+* Binder 是基于 C/S 架构的,其中 Client进程、Server进程、Service Manager进程 运行在用户空间，Binder驱动 运行在内核空间。Client、Server 和 ServiceManager 之间的交互通过系统调用 open、mmap 和 ioctl 来访问设备文件 /dev/binder（Binder驱动，在内核空间通过mmap实现跨进程通信），间接的实现跨进程通信。
+* Binder驱动，Service Manager进程 属于 Android基础架构（系统已经实现好了）；
+* Client 进程 和 Server 进程 属于Android应用层（需要开发者自己实现）
 
 
 ## 参考阅读
@@ -50,4 +91,4 @@ Binder 中文译为粘合剂，它把系统中各个组件粘合到了一起，�
 * [linux基础——linux进程间通信（IPC）机制总结](https://blog.csdn.net/a987073381/article/details/52006729)
 * [一篇文章了解相见恨晚的 Android Binder 进程间通讯机制](https://jeanboy.blog.csdn.net/article/details/70082302?utm_medium=distribute.pc_relevant.none-task-blog-BlogCommendFromMachineLearnPai2-3.control&dist_request_id=&depth_1-utm_source=distribute.pc_relevant.none-task-blog-BlogCommendFromMachineLearnPai2-3.control)
 * [Binder学习指南](http://weishu.me/2016/01/12/binder-index-for-newer/)
-
+* [Android进阶笔记-5. IPC机制 & Binder 原理](https://mp.weixin.qq.com/s/pLVgIQEjvxacZ__QtvT2GQ)
