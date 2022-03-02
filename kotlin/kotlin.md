@@ -2,6 +2,8 @@
 
 内联函数 使用 inline 修饰，空间换时间，比正常函数少了压栈和出栈的操作，当函数体少，以及被频繁调用的函数才适合被定义为内联函数。简单来说，就是把调用函数替换成函数里面的内容。
 
+因为 inline 这个关键字的原因. 使用该方法的地方, 编译器都会复制方法内的实现到使用的地方.
+
 #### 2 apply、run、let、also、with 之间的区别？
 
 with、T.run、T.apply 接收者是 this，T.let、T.also 接收者是 it。
@@ -13,15 +15,13 @@ with、T.run、T.let 返回值是作用域的最后一个对象（this），T.ap
 默认生成下面：
 
 * equals() / hashCode()
-* toString() 
+* toString()
 * componentN()
 * copy()
 
 #### 4  "==" 和 "===" 区别？
 
 == 比较的是数值是否相等, 而 === 比较的是两个对象的地址是否相等。
-
-
 
 #### 5 kotlin 中 var、val、const val 区别？
 
