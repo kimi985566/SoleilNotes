@@ -7,16 +7,17 @@ Android 消息机制本质上是 Handler 运行机制和 MessageQueue 以及Loop
 具体分为四大要素:
 
 - Message(消息)：需要被传递的消息，消息分为硬件产生的消息(如按钮、触摸)和软件生成的消息。
-- MessageQueue(消息队列)：**负责消息的存储与管理**，负责管理由 Handler 发送过来的Message。读取会自动删除消息，单链表维护，插入和删除上有优势。在其 next() 方法中会无限循环，不断判断是否有消息，有就返回这条消息并移除。
+- MessageQueue(消息队列)：**负责消息的存储与管理**，负责管理由 Handler 发送过来的Message。读取会自动删除消息，单链表维护，插入和删除上有优势。在其 next() 方法中会无限循环，不断判断是否有消息，有就返回这条消息并移除。通过Handler 发送的消息并非都是立即执行的，需要先按照Message 的优先级高低（延时时间的长短）保存到MessageQueue 中，之后再来依次执行
 - Handler(消息处理器)：负责 Message 的发送及处理。主要向消息池发送各种消息事件(Handler.sendMessage())和处理相应消息事件(Handler.handleMessage())，按照先进先出执行，内部使用的是单链表的结构。
 - Looper(消息循环器)：负责关联线程以及消息的分发，在该线程下从 MessageQueue获取 Message，分发给Handler，Looper创建的时候会创建一个 MessageQueue，调用loop()方法的时候消息循环开始，其中会不断调用messageQueue的next()方法，当有消息就处理，否则阻塞在messageQueue的next()方法中。当Looper的quit()被调用的时候会调用messageQueue的quit()，此时next()会返回null，然后loop()方法也就跟着退出。
 
 整个消息的循环流程还是比较清晰的：
 
-* Handler 通过 sendMessage() 发送消息 Message 到消息队列 MessageQueue，MessageQueue 负责消息的存储与管理。
-* Looper 通过loop() 不断获取 Message，并将 Message 交给对应的 target handler 来处理。
+- Handler 通过 sendMessage() 发送消息 Message 到消息队列 MessageQueue，MessageQueue 负责消息的存储与管理。
+- Looper 通过loop() 不断获取 Message，并将 Message 交给对应的 target handler 来处理。
+- target handler 调用自身的 handleMessage() 方法来处理 Message。
 
-* target handler 调用自身的 handleMessage() 方法来处理 Message。
+> handler对象所绑定的线程其实并不取决于该handler对象由哪个线程构建，而是取决于该handler对象所绑定的Looper属于哪个线程。
 
 ## 2 消息队列创建
 
@@ -396,6 +397,16 @@ public class Handler {
             }
         }
 }
+```
+
+## 相关问题
+
+### 子线程可以创建Handler吗
+
+可以 
+
+```java
+    Looper.preper();
 ```
 
 Looper.loop() 是个死循环，不断调用 MessageQueue.next() 获取 Message ，并调用msg.target.dispatchMessage(msg) 切换到 Handler 来分发消息，以此来完成消息的回调。
