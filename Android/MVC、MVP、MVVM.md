@@ -124,3 +124,10 @@ Observable、ObservableField、集合类型 Observable 容器类
 
 ```
 
+## 小结
+
+1. MVC架构的主要问题在于Activity承担了View与Controller两层的职责，同时View层与Model层存在耦合。
+2. MVP引入Presenter层解决了MVC架构的两个问题，View只能与Presenter层交互，业务逻辑放在Presenter层。
+3. MVP的问题在于随着业务逻辑的增加，View的接口会很庞大，MVVM架构通过双向数据绑定可以解决这个问题。
+4. MVVM与MVP的主要区别在于,你不用去主动去刷新UI了，只要Model数据变了，会自动反映到UI上。换句话说，MVVM更像是自动化的MVP。
+5. MVVM的双向数据绑定主要通过DataBinding实现，但有很多人(比如我)不喜欢用DataBinding，而是View通过LiveData等观察ViewModle的数据变化并自我更新,这其实是单一数据源而不是双向数据绑定。
