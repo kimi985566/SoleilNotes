@@ -403,12 +403,45 @@ public class Handler {
 
 ### 子线程可以创建Handler吗
 
-可以 
+可以在子线程直接new一个Handler，不过需要在一个线程里需要先调用Looper.prepare()和Looper.loop()方法。
 
 ```java
-    Looper.preper();
+    Thread {
+        Looper.prepare()
+        object : Handler() {
+            override fun handleMessage(msg: Message) {
+                super.handleMessage(msg)
+            }
+        }
+        Looper.loop()
+    }.start()
 ```
 
 Looper.loop() 是个死循环，不断调用 MessageQueue.next() 获取 Message ，并调用msg.target.dispatchMessage(msg) 切换到 Handler 来分发消息，以此来完成消息的回调。
 
-https://blog.csdn.net/start_mao/article/details/98963744
+在主线程中为什么没看到Looper.prepare()？因为系统已经在应用启动的main方法里面调用Looper.prepareMainLooper()。Looper启动了handler的机制才能够正常运行，启动之前有需要prepare去创建Looper。
+
+### Looper死循环为什么不会导致应用卡死
+
+因为当Looper处理完所有消息的时候会进入阻塞状态，当有新的Message进来的时候会打破阻塞继续执行。
+
+这其实没理解好ANR这个概念。当我发送一个绘制UI 的消息到主线程Handler之后，经过一定的时间没有被执行，则抛出ANR异常。Looper的死循环，是循环执行各种事务，包括UI绘制事务。Looper死循环说明线程没有死亡，如果Looper停止循环，线程则结束退出了。Looper的死循环本身就是保证UI绘制任务可以被执行的原因之一。同时UI绘制任务有同步屏障，可以更加快速地保证绘制更快执行。
+
+理解原因：
+
+1. 界面的绘制本身就是这个循环内的一个事件
+2. 界面的绘制是通过了同步屏障保护下发送的异步消息，会被主线程优先处理，因此使得界面绘制拥有了最高的优先级，不会因为 Handler 中事件太多而造成卡顿。
+
+### Hander机制采用的是什么设计模式？
+
+采用的是生产者/消费者的设计模式。子线程生产消息，主线程消费消息，MessageQueue为生产仓库。
+
+### Handler是怎么实现切换线程的？
+
+在一个线程中创建handler，然后在另一个创建的线程中调用该handler的发送消息，该handler中能接收到消息，即实现了线程间通信，那么handler是如何实现线程切换的呢？
+
+当在A线程中创建handler的时候，同时创建了Looper与MessageQueue，Looper在A线程中调用loop进入一个无限的for循环从MessageQueue中取消息。当B线程调用handler发送一个message的时候，会通过msg.target.dispatchMessage(msg);将message插入到handler对应的MessageQueue中，Looper发现有message插入到MessageQueue中，便取出message执行相应的逻辑，因为Looper.loop()是在A线程中启动的，所以则回到了A线程，达到了从B线程切换到A线程的目的。
+
+## 参考
+
+- ![Handler机制——同步屏障](https://blog.csdn.net/start_mao/article/details/98963744)
