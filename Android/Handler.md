@@ -442,6 +442,12 @@ Looper.loop() 是个死循环，不断调用 MessageQueue.next() 获取 Message 
 
 当在A线程中创建handler的时候，同时创建了Looper与MessageQueue，Looper在A线程中调用loop进入一个无限的for循环从MessageQueue中取消息。当B线程调用handler发送一个message的时候，会通过msg.target.dispatchMessage(msg);将message插入到handler对应的MessageQueue中，Looper发现有message插入到MessageQueue中，便取出message执行相应的逻辑，因为Looper.loop()是在A线程中启动的，所以则回到了A线程，达到了从B线程切换到A线程的目的。
 
+### onCreate() 里向 Handler 发送大量 Message 会导致主线程卡顿吗？
+
+不会，发送的大量 Message 并非立即执行，只是先放到队列当中而已。
+onCreate() 以及之后同步调用的 onStart() 和 onResume() 处理，本质上也是 Message。等这个 Message 执行完之后，才会进行读取 Message 的下一次循环，这时候才能回调 onCreate 里发送的 Message。
+需要说明的是，如果发送的是 FrontOfQueue 将 Message 插入队首也不会立即先执行，因为 onStart 和 onResume 是 onCreate 之后同步调用的，本质上是同一个 Message 的作业周期
+
 ## 参考
 
 - ![Handler机制——同步屏障](https://blog.csdn.net/start_mao/article/details/98963744)

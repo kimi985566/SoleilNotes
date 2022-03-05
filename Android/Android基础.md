@@ -1811,3 +1811,31 @@ RecyclerViewPool底层是使用了SparseArray来分开存储不同ViewType的Vie
 2. invalidate：只会调用draw，而且肯定会调，即使什么都没有发生改变，它也会重新绘制。
 3. postInvalidate：用法几乎和invalidate一样，只是invalidate用于UI（主）线程，而postInvalidate用于异步线程。
 
+## 131 LayoutInflater.inflate 3个参数的含义
+
+```java
+public View inflate(@LayoutRes int resource, @Nullable ViewGroup root, boolean attachToRoot)
+```
+
+1. 第一个参数是布局ID 没什么说的
+2. 第二个参数是 root, 如果传了 root , root 的 LayoutParams （布局参数）就会附加到要 inflate 的 view 的布局中。 有时你 root 传了 null, 发现 view 设置的宽高等没有起作用，这是因为没有 root ， view 会按默认布局来实例化。 所以 root 一般都是要传的
+3. 第三个参数表示实例化以后的 view 是否添加到 root 中
+
+下面的两段代码其实是等价的：
+
+```kotlin
+val view = LayoutInflater.from(this).inflate(R.layout.item_header, root, true)
+```
+
+```kotlin
+val view = LayoutInflater.from(this).inflate(R.layout.item_header, root, false)
+root.add(view)  
+```
+
+如果 root 传 null, 没有额外的布局参数会被附加
+
+关于返回值： 只有当 root 不为空且 attachToRoot 为 true 时返回的是 root 的根布局， 其它情况返回的都是要 inflate 的 view 的根布局
+
+注意实例化的 view 不一定是添加到传入的 root 中， 完全可以把 attachToRoot 设为 false ,实例化之后再手动 add 到其它的 ViewGroup 中。
+
+root 只是为实例化过程提供一些布局参考
