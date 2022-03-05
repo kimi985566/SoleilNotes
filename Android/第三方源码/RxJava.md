@@ -15,6 +15,8 @@ RxJava 的核心 是
 
 ## 3 基本使用
 
+![](../../asset/rxjava操作符.png)
+
 RxJava 基本使用如下：
 
 ```java
