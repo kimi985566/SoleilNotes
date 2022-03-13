@@ -125,3 +125,7 @@ class Test{
 ### 13 内联函数工作原理
 
 由于使用了 inline 关键字，编译器会将内联函数的内容复制到调用处，从而避免了创建新的函数对象。 需要注意的是， 内联函数提高代码性能的同时也会导致代码量的增加，所以应避免内联函数过大。
+
+### 14 Kotlin与Java混编
+
+> [Kotlin 与 Java 混编](https://www.bookstack.cn/read/JackChan1999-Kotlin-Tutorials/Kotlin%E4%B8%8EJava%E6%B7%B7%E5%90%88%E5%BC%80%E5%8F%91-Kotlin%20%E4%B8%8E%20Java%20%E6%B7%B7%E7%BC%96.md)
