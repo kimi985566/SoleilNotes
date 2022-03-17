@@ -425,3 +425,15 @@ private Activity performLaunchActivity(ActivityClientRecord r, Intent customInte
 3. Zygote 接收到新进程创建请求后 fork 出新进程
 4. 在新进程里创建 ActivityThread 对象，新创建的进程就是应用的主线程，在主线程里开启 Looper 消息循环，开始处理创建Activity。
 5. ActivityThread利用 ClassLoader 去加载 Activity、创建 Activity 实例，并回调 Activity 的 onCreate() 方法，完成 Activity 的启动。
+
+## 6 问题
+
+### 为什么SystemServer进程与Zygote进程通讯采用Socket而不是Binder
+
+总结下来就是怕父进程binder线程有锁，然后子进程的主线程一直在等其子线程(从父进程拷贝过来的子进程)的资源，但是其实父进程的子进程并没有被拷贝过来，造成死锁，所以fork不允许存在多线程。
+
+而非常巧的是Binder通讯偏偏就是多线程，所以干脆父进程（Zgote）这个时候就不使用binder线程。
+
+### 为什么是Zygote来孵化进程，而不是新建进程呢？
+
+每个应用程序都是运行在各自的Dalvik虚拟机中，应用程序每次运行都要重新初始化和启动虚拟机，这个过程会耗费很长时间。Zygote会把已经运行的虚拟机的代码和内存信息共享，起到一个预加载资源和类的作用，从而缩短启动时间。
