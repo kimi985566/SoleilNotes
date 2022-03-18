@@ -3,7 +3,7 @@
 Activity 的启动过程分为两种：
 
 * 根 Activity 的启动过程（应用程序的启动过程）
-* 普通 Activity 的启动过程   
+* 普通 Activity 的启动过程
 
 根 Activity 的启动过程和普通 Activity 的启动过程有些部分是相通的，只要分析根 Activity，也就了解整个启动过程。Activity 启动过程分为三部分：
 
@@ -11,7 +11,7 @@ Activity 的启动过程分为两种：
 * AMS 到 ApplicationThread 的调用过程
 * ActivityThread 启动 Activity
 
- ## 2 Launcher 请求 AMS 过程
+## 2 Launcher 请求 AMS 过程
 
 点击桌面图标，调用 Launcher 的 startActivitySafely 方法。
 
@@ -90,7 +90,7 @@ public ActivityResult execStartActivity(...) {
   }
 ```
 
-### 2.4 IActivityManager 
+### 2.4 IActivityManager
 
 ```java
 //IActivityManager 由 AIDL 工具在编译时自动生成的
@@ -416,15 +416,24 @@ private Activity performLaunchActivity(ActivityClientRecord r, Intent customInte
    }
 ```
 
-
-
 ## 5 总结
 
-![](../asset/Activity启动过程.png)
+![Activity启动过程](../asset/Activity启动过程.png)
 
 1. 点击桌面应用图标，Launcher 进程将启动 Activity（MainActivity）的请求以 Binder 的方式发送给了AMS
-
 2. AMS 接收到启动请求后，交付 ActivityStarter 处理 Intent和 Flag 等信息，然后再交给ActivityStackSupervisior/ActivityStack 处理 Activity 进栈相关流程。同时以 Socket 方式请求 Zygote 进程fork新进程。
 3. Zygote 接收到新进程创建请求后 fork 出新进程
 4. 在新进程里创建 ActivityThread 对象，新创建的进程就是应用的主线程，在主线程里开启 Looper 消息循环，开始处理创建Activity。
 5. ActivityThread利用 ClassLoader 去加载 Activity、创建 Activity 实例，并回调 Activity 的 onCreate() 方法，完成 Activity 的启动。
+
+## 6 问题
+
+### 为什么SystemServer进程与Zygote进程通讯采用Socket而不是Binder
+
+总结下来就是怕父进程binder线程有锁，然后子进程的主线程一直在等其子线程(从父进程拷贝过来的子进程)的资源，但是其实父进程的子进程并没有被拷贝过来，造成死锁，所以fork不允许存在多线程。
+
+而非常巧的是Binder通讯偏偏就是多线程，所以干脆父进程（Zgote）这个时候就不使用binder线程。
+
+### 为什么是Zygote来孵化进程，而不是新建进程呢？
+
+每个应用程序都是运行在各自的Dalvik虚拟机中，应用程序每次运行都要重新初始化和启动虚拟机，这个过程会耗费很长时间。Zygote会把已经运行的虚拟机的代码和内存信息共享，起到一个预加载资源和类的作用，从而缩短启动时间。
