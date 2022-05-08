@@ -165,6 +165,12 @@ Binder是基于开源的OpenBinder实现的，OpenBinder最早并不是由Google
 - Binder主要用在Service中,包括普通的Service,AIDL和Messenger
 - 普通的Service中的Binder不涉及进程间通信,没有触及到Binder的核心
 
+#### 为什么SystemServer进程与Zygote进程通讯采用Socket而不是Binder
+
+总结下来就是怕父进程binder线程有锁，然后子进程的主线程一直在等其子线程(从父进程拷贝过来的子进程)的资源，但是其实父进程的子进程并没有被拷贝过来，造成死锁，所以fork不允许存在多线程。
+
+而非常巧的是Binder通讯偏偏就是多线程，所以干脆父进程（Zgote）这个时候就不使用binder线程。
+
 ## 参考阅读
 
 * [linux基础——linux进程间通信（IPC）机制总结](https://blog.csdn.net/a987073381/article/details/52006729)
