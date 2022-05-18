@@ -397,3 +397,36 @@ protected void setValue(T value) {
 LiveData#observeForever 方法其实用的比较少，但是如果将 LiveData 作为事件总线机制或者配置之类时，它就会派上用场。
 
 AlwaysActiveObserver 不依赖生命周期了，所以不会像 LifecycleBoundObserver 在生命周期变为 DESTROYED 时调用 LiveData#removeObserver 从 LiveData#mObservers Map 中移除自身，所以我们在使用 LiveData#observeForever 时应在不需要的时候调用 LiveData#removeObserver ，否则可能会发生内存泄露。
+
+## 总结
+
+### LiveData 如何感知生命周期的变化？
+
+- Jetpack 引入了 Lifecycle，让任何组件都能方便地感知界面生命周期的变化。只需实现 `LifecycleEventObserver` 接口并注册给生命周期对象即可。
+- LiveData 的数据观察者在内部被包装成另一个对象（实现了 `LifecycleEventObserver` 接口），它同时具备了数据观察能力和生命周期观察能力。
+
+### LiveData 是如何避免内存泄漏的？
+
+- LiveData 的数据观察者通常是匿名内部类，它持有界面的引用，可能造成内存泄漏。
+- LiveData 内部会将数据观察者进行封装，使其具备生命周期感知能力。当生命周期状态为 DESTROYED 时，自动移除观察者。
+
+### LiveData 是粘性的吗？若是，它是怎么做到的？
+
+- LiveData 的值被存储在内部的字段中，直到有更新的值覆盖，所以值是持久的。
+- 两种场景下 LiveData 会将存储的值分发给观察者。
+  - 一是值被更新，此时会遍历所有观察者并分发之。
+  - 二是新增观察者或观察者生命周期发生变化（至少为 STARTED），此时只会给单个观察者分发值。
+- LiveData 的观察者会维护一个“值的版本号”，用于判断上次分发的值是否是最新值。该值的初始值是-1，每次更新 LiveData 值都会让版本号自增。
+- LiveData 并不会无条件地将值分发给观察者，在分发之前会经历三道坎：
+  - 1. 数据观察者是否活跃。
+  - 2. 数据观察者绑定的生命周期组件是否活跃。
+  - 3. 数据观察者的版本号是否是最新的。
+- “新观察者”被“老值”通知的现象叫“粘性”。因为新观察者的版本号总是小于最新版号，且添加观察者时会触发一次老值的分发。
+
+### 什么情况下 LiveData 会丢失数据？
+
+- 在高频数据更新的场景下使用 LiveData.postValue() 时，会造成数据丢失。因为“设值”和“分发值”是分开执行的，之间存在延迟。值先被缓存在变量中，再向主线程抛一个分发值的任务。若在这延迟之间再一次调用 postValue()，则变量中缓存的值被更新，之前的值在没有被分发之前就被擦除了。
+
+### 在 Fragment 中使用 LiveData 需注意些什么？
+
+- 在 Fragment 中观察 LiveData 时使用viewLifecycleOwner而不是this。因为 Fragment 和 其中的 View 生命周期不完全一致。LiveData 内部判定生命周期为 DESTROYED 时，才会移除数据观察者。存在一种情况，当 Fragment 之间切换时，被替换的 Fragment 不执行 onDestroy()，当它再次展示时会再次订阅 LiveData，于是乎就多出一个订阅者。
