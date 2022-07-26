@@ -386,3 +386,27 @@ final Node<K,V>[] resize() {
 2. 再哈希法
 3. 链地址法
 4. 建立公共溢出区
+
+# 为什么要使用SparseArray和ArrayMap替代HashMap?
+
+## SparseArray
+
+SparseArray中Key为int类型（避免了装箱和拆箱），Value是Object类型，所有的Key和Value分别对应一个数组，Key数组int值是按顺序排列的，查找的时候采用的是**二分查找**，效率很高。而Value数组的位置和Key数组中的位置是一样的。
+
+add的时候会进行位移，remove的时候不一定会进行位移，把某个值标记为delete，如果下次有符合的值直接放到该位置，就没有位移了。但是也有缺点，Key只能是int值。最后Android中还扩展了SparseLongArray。
+
+## ArrayMap
+
+ArrayMap的Key和Value同HashMap一样都可以存放多种类型
+
+- mHashes是一个记录所有key的hashcode值组成的数组，是从小到大的排序方式；采用二分查找法，从mHashes数组中查找值等于hash的key
+- mArray是一个记录着key-value键值对所组成的数组，是mHashes大小的2倍
+
+ArrayMap中有两个非常重要的静态成员变量mBaseCache和mTwiceBaseCacheSize，用于ArrayMap所在进程的全局缓存功能：
+
+- mBaseCache：用于缓存大小为4的ArrayMap，mBaseCacheSize记录着当前已缓存的数量，超过10个则不再缓存；
+- mTwiceBaseCacheSize：用于缓存大小为8的ArrayMap，mTwiceBaseCacheSize记录着当前已缓存的数量，超过10个则不再缓存。
+
+很多场景可能起初都是数据很少，为了减少频繁地创建和回收Map对象，ArrayMap采用了两个大小为10的缓存队列来分别保存大小为4和8的Map对象。为了节省内存有更加保守的内存扩张以及内存收缩策略。
+
+ArrayMap中解决Hash冲突的方式是追加的方式，比如两个key的hash(int)值一样，那就把数据全部后移一位，通过追加的方式解决Hash冲突。
